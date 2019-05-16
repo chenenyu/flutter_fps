@@ -3,13 +3,13 @@ import 'fps.dart';
 const int _oneFrameTime = 1 * 1000 * 1000 ~/ 60; // in microseconds
 
 /// Calculates fps according to the frame list.
-void calc(List<int> frames) async {
+void calc(List<int> frames) {
   assert(frames != null);
 
   int droppedCount = 0;
   frames.forEach((int time) {
     if (time > _oneFrameTime) {
-      droppedCount += time ~/ _oneFrameTime;
+      droppedCount += (time / _oneFrameTime).ceil();
     }
   });
   double fps = 60 * frames.length / (frames.length + droppedCount);
