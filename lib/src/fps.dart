@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'fps_indicator.dart';
 import 'frame_captor.dart';
 
+/// Fps callback. 0 means idle.
 typedef FpsCallback = void Function(double fps);
 
 List<FpsCallback> fpsCallbacks = [];
