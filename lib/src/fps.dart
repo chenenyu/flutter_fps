@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:flutter/widgets.dart';
 
-import 'fps_indicator.dart';
 import 'frame_captor.dart';
 
 /// Fps callback. 0 means idle.
@@ -34,20 +33,19 @@ class Fps {
   }
 
   void start(BuildContext context,
-      {bool showIndicator = true, Widget indicator}) async {
+/*{bool showIndicator = true, Widget indicator }*/) async {
     if (!_started) {
       _started = true;
       capture();
-
-      if (showIndicator) {
-        insertIndicator(context, indicator: indicator);
-      }
+//      if (showIndicator) {
+//        insertIndicator(context, indicator: indicator);
+//      }
     }
   }
 
   void stop() {
     reset();
-    removeIndicator();
+//    removeIndicator();
     _started = false;
   }
 }

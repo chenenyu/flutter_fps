@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:ui';
 
 import 'fps.dart';
@@ -12,8 +11,6 @@ const int _calcInterval = 200;
 
 /// starts to capture frames.
 void capture() {
-  Timer timer;
-  bool skipFrame = false;
   DateTime anchorTime;
   DateTime frameStartTime;
   DateTime frameEndTime;
@@ -24,26 +21,15 @@ void capture() {
   _originalOnDrawFrame ??= window.onDrawFrame;
 
   FrameCallback newOnBeginFrame = (Duration timeStamp) {
-    if (timer != null && timer.isActive) {
-      timer.cancel();
-    }
-
-    if (!skipFrame) {
-      frameStartTime = DateTime.now();
-      if (anchorTime == null) {
-        anchorTime = frameStartTime;
-      }
+    frameStartTime = DateTime.now();
+    if (anchorTime == null) {
+      anchorTime = frameStartTime;
     }
 
     _originalOnBeginFrame(timeStamp);
   };
   VoidCallback newOnDrawFrame = () {
     _originalOnDrawFrame();
-
-    if (skipFrame) {
-      skipFrame = false;
-      return;
-    }
 
     frameEndTime = DateTime.now();
     // time that last frame cost
@@ -64,13 +50,6 @@ void capture() {
       frames.clear();
       anchorTime = null;
     }
-
-    // emit idle callback after 500ms
-    timer = Timer(Duration(milliseconds: 500), () {
-      fpsCallbacks.forEach((fpsCallback) => fpsCallback(0));
-      // skip next frame to avoid indicator's circulation rendering
-      skipFrame = true;
-    });
   };
 
   window.onBeginFrame = newOnBeginFrame;
