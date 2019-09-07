@@ -30,6 +30,11 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     Fps.instance.start(context);
+    Fps.instance.addFpsCallback((l) {
+      l.forEach((f) {
+        print(f.toString());
+      });
+    });
   }
 
   @override
