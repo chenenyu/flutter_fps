@@ -29,12 +29,16 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    Fps.instance.start(context);
-    Fps.instance.addFpsCallback((l) {
-      l.forEach((f) {
-        print(f.toString());
-      });
+    Fps.instance.start();
+    Fps.instance.addFpsCallback((fpsInfo) {
+      print(fpsInfo);
     });
+  }
+
+  @override
+  void dispose() {
+    Fps.instance.stop();
+    super.dispose();
   }
 
   @override
