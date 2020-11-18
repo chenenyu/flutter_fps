@@ -1,11 +1,12 @@
 library fps;
 
+import 'dart:collection';
 import 'dart:ui';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/scheduler.dart';
 
 /// Fps callback.
-typedef FpsCallback = void Function(List<FpsInfo> fps);
+typedef FpsCallback = void Function(FpsInfo fpsInfo);
 
 class Fps {
   Fps._();
@@ -19,61 +20,114 @@ class Fps {
     return _instance;
   }
 
-  bool _started = false;
-  TimingsCallback _originalOnReportTimings;
-  List<FpsCallback> _fpsCallbacks = [];
+  /// 每帧的耗时阈值
+  /// 1000/60hz ≈ 16.6ms  1000/120hz ≈ 8.3ms
+  Duration _thresholdPerFrame =
+      Duration(microseconds: Duration.microsecondsPerSecond ~/ 60);
 
-  void addFpsCallback(FpsCallback fpsCallback) {
-    _fpsCallbacks.add(fpsCallback);
+  /// 刷新率，默认60
+  double _refreshRate = 60;
+
+  /// 设置刷新率
+  set refreshRate(double rate) {
+    if (rate != _refreshRate && rate >= 60) {
+      _refreshRate = rate;
+      _thresholdPerFrame = Duration(
+          microseconds: Duration.microsecondsPerSecond ~/ _refreshRate);
+    }
   }
 
-  void start(BuildContext context) async {
-    if (!_started) {
-      _started = true;
+  bool _started = false;
+  List<FpsCallback> _fpsCallbacks = [];
 
-      _originalOnReportTimings = window.onReportTimings;
-      TimingsCallback newReportTimings = (List<FrameTiming> timings) {
-        if (_fpsCallbacks.isNotEmpty) {
-          List<FpsInfo> fps =
-          timings.map<FpsInfo>((timing) => FpsInfo(timing)).toList();
-          _fpsCallbacks.forEach((callback) {
-            callback(fps);
-          });
-        }
-      };
-      window.onReportTimings = newReportTimings;
+  /// 暂存120帧
+  static const int _queue_capacity = 120;
+  final ListQueue framesQueue = ListQueue<FrameTiming>(_queue_capacity);
+
+  void addFpsCallback(FpsCallback callback) {
+    _fpsCallbacks.add(callback);
+  }
+
+  void removeFpsCallback(FpsCallback callback) {
+    assert(_fpsCallbacks.contains(callback));
+    _fpsCallbacks.remove(callback);
+  }
+
+  void start() async {
+    if (!_started) {
+      SchedulerBinding.instance.addTimingsCallback(_onTimingsCallback);
+      _started = true;
     }
   }
 
   void stop() {
-    if (_originalOnReportTimings != null) {
-      window.onReportTimings = _originalOnReportTimings;
-      _originalOnReportTimings = null;
+    if (_started) {
+      SchedulerBinding.instance.removeTimingsCallback(_onTimingsCallback);
+      _started = false;
     }
-    _started = false;
+  }
+
+  _onTimingsCallback(List<FrameTiming> timings) async {
+    if (_fpsCallbacks.isNotEmpty) {
+      for (FrameTiming timing in timings) {
+        framesQueue.addFirst(timing);
+      }
+      while (framesQueue.length > _queue_capacity) {
+        framesQueue.removeLast();
+      }
+
+      List<FrameTiming> drawFrames = [];
+      for (FrameTiming timing in framesQueue) {
+        if (drawFrames.isEmpty) {
+          drawFrames.add(timing);
+        } else {
+          int lastStart =
+              drawFrames.last.timestampInMicroseconds(FramePhase.vsyncStart);
+          int interval = lastStart -
+              timing.timestampInMicroseconds(FramePhase.rasterFinish);
+          if (interval > (_thresholdPerFrame.inMicroseconds * 2)) {
+            // maybe in different set
+            break;
+          }
+          drawFrames.add(timing);
+        }
+      }
+      framesQueue.clear();
+
+      // compute total frames count.
+      int totalCount = drawFrames.map((frame) {
+        // If droppedCount > 0,
+        int droppedCount =
+            frame.totalSpan.inMicroseconds ~/ _thresholdPerFrame.inMicroseconds;
+        return droppedCount + 1;
+      }).fold(0, (a, b) => a + b);
+
+      int drawFramesCount = drawFrames.length;
+      int droppedCount = totalCount - drawFramesCount;
+      double fps = drawFramesCount / totalCount * _refreshRate;
+      FpsInfo fpsInfo = FpsInfo(fps, totalCount, droppedCount, drawFramesCount);
+      _fpsCallbacks?.forEach((callBack) {
+        callBack(fpsInfo);
+      });
+    }
   }
 }
 
 class FpsInfo {
-  final FrameTiming frameTiming;
+  double fps;
+  int totalFramesCount;
+  int droppedFramesCount;
+  int drawFramesCount;
 
-  FpsInfo(this.frameTiming);
-
-  int get fps => 1000 ~/ totalSpan;
-
-  /// The duration in milliseconds to build the frame on the UI thread.
-  double get uiSpan => _formatMS(frameTiming.buildDuration);
-
-  /// The duration in milliseconds to rasterize the frame on the GPU thread.
-  double get gpuSpan => _formatMS(frameTiming.rasterDuration);
-
-  /// The duration in milliseconds during a lifetime of a frame.
-  double get totalSpan => _formatMS(frameTiming.totalSpan);
-
-  double _formatMS(Duration duration) => duration.inMicroseconds * 0.001;
+  FpsInfo(this.fps, this.totalFramesCount, this.droppedFramesCount,
+      this.drawFramesCount);
 
   @override
   String toString() {
-    return '$runtimeType(fps: $fps, uiSpan: $uiSpan, gpuSpan: $gpuSpan, totalSpan: $totalSpan)';
+    return 'FpsInfo{'
+        'fps: $fps, '
+        'totalFramesCount: $totalFramesCount, '
+        'droppedFramesCount: $droppedFramesCount, '
+        'drawFramesCount: $drawFramesCount}';
   }
 }
