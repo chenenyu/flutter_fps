@@ -1,5 +1,3 @@
-library fps;
-
 import 'dart:collection';
 import 'dart:ui';
 

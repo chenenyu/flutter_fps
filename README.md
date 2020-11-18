@@ -1,4 +1,4 @@
-# flutter-fps
+# flutter_fps
 
 [![pub package](https://img.shields.io/pub/v/flutter_fps.svg)](https://pub.dev/packages/flutter_fps)
 
@@ -11,7 +11,7 @@ In your flutter project add the dependency:
 ```yaml
 dependencies:
   ...
-  flutter_fps: ^0.0.2
+  flutter_fps: ^0.1.0
 ```
 
 ## Usage:
