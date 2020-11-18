@@ -16,16 +16,11 @@ dependencies:
 
 ## Usage:
 
-Import first:  
-
-`import 'package:flutter_fps/flutter_fps.dart';`
-
-Then in your top level `StatefulWidget`, add the following line:  
-
 ```dart
-@override
-void initState() {
-  super.initState();
-  Fps.instance.start(context);
-}
+import 'package:flutter_fps/flutter_fps.dart';
+
+Fps.instance.start();
+Fps.instance.addFpsCallback((fpsInfo) {
+  print(fpsInfo);
+});
 ```
