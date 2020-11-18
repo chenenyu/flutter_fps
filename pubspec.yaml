@@ -1,6 +1,6 @@
 name: flutter_fps
 description: A Flutter library to catch fps.
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/chenenyu/flutter_fps
 publish_to: https://pub.dev
 
